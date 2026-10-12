@@ -1,0 +1,24 @@
+# Generated builds and local IDE configuration
+/build/
+/cmake-build-*/
+/CMakeUserPresets.json
+*.user
+/.idea/
+/.vscode/
+
+# Local planning, investigation notes and reference material
+/PLAN.md
+/NOTES.md
+/notes/
+/plans/
+/docs/
+/captures/
+/downloads/
+/screenshots/
+/AGENTS.md
+/.opencode/
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example

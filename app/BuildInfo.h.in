@@ -1,0 +1,5 @@
+#pragma once
+
+namespace BuildInfo {
+inline constexpr auto Version = "@PROJECT_VERSION@";
+}
