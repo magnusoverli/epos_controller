@@ -1,5 +1,6 @@
 #pragma once
 
 namespace BuildInfo {
+inline constexpr auto Name = "Headset Controller";
 inline constexpr auto Version = "@PROJECT_VERSION@";
 }

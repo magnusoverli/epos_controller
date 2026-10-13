@@ -1,0 +1,60 @@
+name: Build and validate
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  application:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [release, sanitize]
+    env:
+      CC: gcc-14
+      CXX: g++-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native dependencies
+        run: sudo apt-get update && sudo apt-get install -y g++-14 ninja-build libudev-dev libgl-dev libegl-dev libxkbcommon-dev libvulkan-dev libgssapi-krb5-2 libfontconfig1 libx11-xcb1 libxcb-cursor0
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.12.0'
+          arch: linux_gcc_64
+          modules: qtshadertools qttasktree
+          cache: true
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }} --parallel 2
+      - name: Test
+        run: ctest --preset ${{ matrix.preset }}
+      - name: QML lint
+        run: cmake --build build/${{ matrix.preset }} --target headset-controller_qmllint
+      - name: Relocated installation
+        if: matrix.preset == 'release'
+        run: python3 scripts/check-install.py build/release
+      - name: Clean runtime image without a system Qt installation
+        if: matrix.preset == 'release'
+        run: |
+          cmake --install build/release --prefix "$PWD/build/stage"
+          docker build -f packaging/smoke.Dockerfile -t headset-smoke packaging
+          docker run --rm --network none -v "$PWD/build/stage:/opt/headset:ro" headset-smoke --smoke-test --page 2
+  parser:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y clang-18 libc++-18-dev libc++abi-18-dev ninja-build
+      - name: Configure parser and coverage-guided fuzzer without Qt
+        run: cmake -S . -B build/fuzz -G Ninja -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_CXX_FLAGS=-stdlib=libc++ -DHEADSET_PARSER_ONLY=ON -DHEADSET_FUZZING=ON
+      - run: cmake --build build/fuzz --parallel 2
+      - run: ctest --test-dir build/fuzz --output-on-failure
+      - name: Seed and fuzz
+        run: |
+          python3 scripts/seed-fuzz.py build/corpus
+          build/fuzz/hid-descriptor-fuzz build/corpus -max_total_time=30 -max_len=8193
+  formatting:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install 'clang-format>=21,<22'
+      - run: python3 scripts/check-format.py

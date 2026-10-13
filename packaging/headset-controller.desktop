@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Headset Controller
+Comment=Read-only headset discovery and USB diagnostics
+Exec=headset-controller
+Icon=headset-controller
+Terminal=false
+Categories=AudioVideo;Utility;

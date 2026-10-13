@@ -30,12 +30,23 @@ struct Report {
 struct Description {
     std::vector<std::uint32_t> usagePages;
     std::vector<Report> reports;
+    bool operator==(const Description &) const = default;
 };
 
 enum class ErrorCode : std::uint8_t {
-    Empty, TooLarge, LongItem, TruncatedItem, InvalidItemSize, InvalidReportId,
-    GlobalUnderflow, CollectionUnderflow, Unbalanced, NestingLimit,
-    ReportTooLarge, EmptyReport, MixedReportIds
+    Empty,
+    TooLarge,
+    LongItem,
+    TruncatedItem,
+    InvalidItemSize,
+    InvalidReportId,
+    GlobalUnderflow,
+    CollectionUnderflow,
+    Unbalanced,
+    NestingLimit,
+    ReportTooLarge,
+    EmptyReport,
+    MixedReportIds
 };
 
 struct ParseError {
@@ -50,6 +61,7 @@ using Result = std::expected<Description, ParseError>;
 // This inspects report layout, not every semantic constraint of the HID spec.
 [[nodiscard]] Result parse(std::span<const std::byte> bytes);
 [[nodiscard]] std::string_view message(ErrorCode error) noexcept;
+[[nodiscard]] std::string_view codeName(ErrorCode error) noexcept;
 [[nodiscard]] std::string_view name(ReportKind kind) noexcept;
 
-}
+} // namespace HidDescriptor

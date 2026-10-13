@@ -4,6 +4,7 @@ import QtQuick.Controls
 
 Label {
     color: Theme.ink
-    font.pixelSize: 24
+    font.pixelSize: Theme.headingSize
     font.weight: Font.Light
+    textFormat: Text.PlainText
 }

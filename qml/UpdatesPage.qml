@@ -5,7 +5,7 @@ import QtQuick.Layouts
 
 RowLayout {
     id: root
-    required property var device
+    required property SelectedDevice device
     spacing: 32
     Panel {
         Layout.fillWidth: true
@@ -14,11 +14,11 @@ RowLayout {
         ColumnLayout {
             anchors { fill: parent; margins: 32 }
             spacing: 30
-            Heading { text: "Update Overview" }
+            Heading { text: qsTr("Update Overview") }
             RowLayout {
                 Layout.fillWidth: true
-                Label { text: "PRODUCT"; Layout.fillWidth: true; color: Theme.muted }
-                Label { text: "VERSION"; color: Theme.muted }
+                Label { text: qsTr("PRODUCT"); Layout.fillWidth: true; color: Theme.muted }
+                Label { text: qsTr("VERSION"); color: Theme.muted }
             }
             Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.line }
             RowLayout {
@@ -26,7 +26,7 @@ RowLayout {
                 Label { text: Qt.application.name; Layout.fillWidth: true; color: Theme.ink }
                 Label { text: Qt.application.version; color: Theme.ink }
             }
-            Label { text: root.device ? root.device.name + " — Firmware unknown" : "No headset connected"; color: Theme.ink }
+            Label { text: root.device.connected ? qsTr("%1 — Firmware unknown").arg(root.device.name) : qsTr("No headset selected or connected"); textFormat: Text.PlainText; Layout.fillWidth: true; wrapMode: Text.Wrap; maximumLineCount: 3; elide: Text.ElideRight; color: Theme.ink }
             Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.line }
             Item { Layout.fillHeight: true }
         }
@@ -37,11 +37,11 @@ RowLayout {
         Column {
             anchors { fill: parent; margins: 32 }
             spacing: 40
-            Heading { text: "Firmware updates" }
+            Heading { text: qsTr("Firmware updates") }
             Label {
                 width: parent.width
                 wrapMode: Text.WordWrap
-                text: "Firmware checking and installation are not implemented in this prototype. No update requests are sent."
+                text: qsTr("Firmware checking and installation are not implemented in this prototype. No update requests are sent.")
                 color: Theme.muted
                 font.pixelSize: 18
             }

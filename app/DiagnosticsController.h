@@ -1,16 +1,23 @@
 #pragma once
-
 #include "DeviceDiscovery.h"
 #include <QObject>
 
-// UI use cases live here, not in the hardware scanner or discovery state.
 class DiagnosticsController final : public QObject {
     Q_OBJECT
-public:
+    Q_PROPERTY(QString snapshot READ snapshot NOTIFY snapshotChanged)
+    Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
+  public:
     explicit DiagnosticsController(DeviceDiscovery &discovery, QObject *parent = nullptr);
-    Q_INVOKABLE QString refresh();
+    QString snapshot() const { return m_snapshot; }
+    bool busy() const { return m_pending; }
+    Q_INVOKABLE void refresh();
     Q_INVOKABLE void copy(const QString &snapshot);
+  signals:
+    void snapshotChanged();
+    void busyChanged();
 
-private:
+  private:
     DeviceDiscovery &m_discovery;
+    QString m_snapshot;
+    bool m_pending = false;
 };

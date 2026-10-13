@@ -20,16 +20,24 @@
       "inherits": "dev",
       "binaryDir": "${sourceDir}/build/sanitize",
       "cacheVariables": { "HEADSET_SANITIZERS": "ON" }
+    },
+    {
+      "name": "parser",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build/parser",
+      "cacheVariables": { "HEADSET_PARSER_ONLY": "ON" }
     }
   ],
   "buildPresets": [
     { "name": "dev", "configurePreset": "dev" },
     { "name": "release", "configurePreset": "release" },
-    { "name": "sanitize", "configurePreset": "sanitize" }
+    { "name": "sanitize", "configurePreset": "sanitize" },
+    { "name": "parser", "configurePreset": "parser" }
   ],
   "testPresets": [
     { "name": "dev", "configurePreset": "dev", "output": { "outputOnFailure": true } },
     { "name": "release", "configurePreset": "release", "output": { "outputOnFailure": true } },
-    { "name": "sanitize", "configurePreset": "sanitize", "output": { "outputOnFailure": true } }
+    { "name": "sanitize", "configurePreset": "sanitize", "output": { "outputOnFailure": true } },
+    { "name": "parser", "configurePreset": "parser", "output": { "outputOnFailure": true } }
   ]
 }

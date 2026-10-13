@@ -1,9 +1,7 @@
 #pragma once
-
-#include <QString>
-#include <QVariantList>
+#include "DeviceSnapshot.h"
+#include <QByteArray>
 
 namespace Diagnostics {
-// Serialization only: no refresh, clipboard or filesystem side effects.
-[[nodiscard]] QString toJson(const QVariantList &devices);
+[[nodiscard]] QByteArray toJson(const ScanResult &snapshot);
 }

@@ -1,21 +1,28 @@
 #pragma once
 
-#include <QString>
-#include <QVariantList>
+#include "DeviceSnapshot.h"
+#include "HidInspection.h"
+#include <QHash>
 
-// All filesystem roots are configurable, including HID and permission lookup.
-// Tests must never accidentally inspect the host's devices.
 struct SysfsPaths {
     QString usb = "/sys/bus/usb/devices";
     QString hid = "/sys/class/hidraw";
     QString devices = "/dev";
 };
 
+// Owned by one worker. Callers must not invoke this scanner concurrently.
 class SysfsDeviceScanner {
-public:
+  public:
     explicit SysfsDeviceScanner(SysfsPaths paths = {});
-    [[nodiscard]] QVariantList operator()() const;
+    [[nodiscard]] ScanResult operator()(bool force = false);
 
-private:
+  private:
+    struct Connection {
+        QString identity;
+        QString id;
+    };
     SysfsPaths m_paths;
+    QHash<QString, Connection> m_connections;
+    quint64 m_generation = 0;
+    HidInspection m_hid;
 };

@@ -1,56 +1,210 @@
 #include "DeviceDiscovery.h"
-#include "SysfsDeviceScanner.h"
 #include "Diagnostics.h"
+#include "SysfsReader.h"
+#include "TestFixtures.h"
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QJsonArray>
-#include <QCoreApplication>
-#include <QTemporaryDir>
-#include <QDir>
-#include <QFile>
-#include <cstdio>
-#include <memory>
+#include <QMutex>
+#include <QSemaphore>
+#include <QSignalSpy>
+#include <QTest>
+#include <atomic>
+#include <sys/stat.h>
+#include <unistd.h>
 
-int main(int argc, char **argv) {
-    QCoreApplication app(argc, argv);
-    QTemporaryDir root;
-    if (!root.isValid()) return 1;
-    auto write = [&](const QString &device, const QString &attribute, const QByteArray &value) {
-        QDir().mkpath(root.path() + '/' + device);
-        QFile file(root.path() + '/' + device + '/' + attribute);
-        return file.open(QIODevice::WriteOnly) && file.write(value) == value.size();
-    };
-    if (!write("1-1", "idVendor", "1395\n") || !write("1-1", "idProduct", "018e\n") ||
-        !write("1-1", "product", "EPOS IMPACT 860T ANC\n") ||
-        !write("1-1:1.3", "product", "HID interface\n") ||
-        !write("2-1", "idVendor", "1395") || !write("2-1", "idProduct", "ffff") ||
-        !write("3-1", "idVendor", "1234") || !write("3-1", "idProduct", "018e")) return 2;
-    const auto scan = [&] { return SysfsDeviceScanner({root.path(), root.path() + "/hid", root.path() + "/dev"})(); };
-    auto devices = scan();
-    if (devices.size() != 1 || devices.first().toMap().value("name") != "EPOS IMPACT 860T ANC") return 3;
-    QDir(root.path() + "/1-1").removeRecursively();
-    if (!scan().isEmpty()) return 4;
-    if (!SysfsDeviceScanner({root.path() + "/missing", "", ""})().isEmpty()) return 5;
-    // Observable state uses a fake provider, never the host. Unchanged polls
-    // must not notify; unplug/replug must each produce exactly one update.
-    DeviceDiscovery discovery([&devices] { return devices; }, nullptr, std::chrono::milliseconds::zero());
-    int notifications = 0;
-    QObject::connect(&discovery, &DeviceDiscovery::devicesChanged, [&] { ++notifications; });
-    discovery.refresh();
-    if (notifications != 0) return 6;
-    const auto connected = devices;
-    devices.clear();
-    discovery.refresh();
-    if (notifications != 1 || !discovery.devices().isEmpty()) return 7;
-    devices = connected;
-    discovery.refresh();
-    if (notifications != 2 || discovery.devices() != connected) return 8;
-    const auto report = QJsonDocument::fromJson(Diagnostics::toJson(devices).toUtf8()).object();
-    if (report["schemaVersion"].toInt() != 1 || report["devices"].toArray().size() != 1) return 9;
-    DeviceDiscovery owningProvider(
-        [snapshot = std::make_unique<QVariantList>(connected)] { return *snapshot; },
-        nullptr, std::chrono::milliseconds::zero());
-    if (owningProvider.devices() != connected) return 10;
-    std::puts("Discovery filtering, interface deduplication, disconnect and missing-root checks passed.");
-    return 0;
-}
+class DiscoveryTest : public QObject {
+    Q_OBJECT
+  private slots:
+    void filteringAndGeneration() {
+        Fixture fixture;
+        const auto usb = fixture.addDevice();
+        fixture.addHid(usb);
+        // FIFOs would block if the scanner read attributes it should skip.
+        const auto ignored = fixture.paths.usb + "/1-1:1.4";
+        QVERIFY(QDir().mkpath(ignored));
+        QCOMPARE(::mkfifo(QFile::encodeName(ignored + "/idVendor").constData(), 0600), 0);
+        writeFixture(fixture.paths.usb + "/2-1/idVendor", "1234");
+        QCOMPARE(::mkfifo(QFile::encodeName(fixture.paths.usb + "/2-1/idProduct").constData(), 0600), 0);
+        SysfsDeviceScanner scanner(fixture.paths);
+        const auto first = scanner();
+        QCOMPARE(first.status, ScanStatus::Ready);
+        QCOMPARE(first.devices.size(), 1);
+        QCOMPARE(first.devices.first().hidInterfaces.size(), 1);
+        QCOMPARE(scanner().devices, first.devices);
+        QCOMPARE(scanner(true).devices, first.devices);
+        writeFixture(usb + "/devnum", "2");
+        const auto replaced = scanner();
+        QVERIFY(replaced.devices.first().connectionId != first.devices.first().connectionId);
+        QVERIFY(QDir(usb).removeRecursively());
+        QVERIFY(scanner().devices.isEmpty());
+        fixture.addDevice();
+        const auto reconnected = scanner();
+        QVERIFY(reconnected.devices.first().connectionId != first.devices.first().connectionId);
+    }
+
+    void structuredFailures() {
+        Fixture fixture;
+        SysfsDeviceScanner scanner(fixture.paths);
+        QCOMPARE(scanner().status, ScanStatus::Ready);
+        QVERIFY(QDir(fixture.paths.usb).removeRecursively());
+        const auto unavailable = scanner();
+        QCOMPARE(unavailable.status, ScanStatus::Unavailable);
+        QCOMPARE(unavailable.issues.first().code, ReadError::Missing);
+        const auto usb = fixture.addDevice();
+        writeFixture(usb + "/product", QByteArray(4097, 'x'));
+        const auto partial = scanner();
+        QCOMPARE(partial.status, ScanStatus::Partial);
+        QCOMPARE(partial.devices.first().issues.first().code, ReadError::TooLarge);
+        QCOMPARE(partial.devices.first().name, QString("EPOS IMPACT 860T ANC"));
+        const auto json = QJsonDocument::fromJson(Diagnostics::toJson(unavailable)).object();
+        QCOMPARE(json["scanStatus"].toString(), QString("unavailable"));
+        QCOMPARE(json["issues"].toArray().first().toObject()["code"].toString(), QString("missing"));
+        QVERIFY(!json["capturedAt"].toString().isEmpty());
+    }
+
+    void readLimitsAndPermissions() {
+        Fixture fixture;
+        const auto path = fixture.root.path() + "/attribute";
+        writeFixture(path, QByteArray(16, 'a'));
+        QVERIFY(SysfsReader::read(path, 16));
+        writeFixture(path, QByteArray(17, 'a'));
+        QCOMPARE(SysfsReader::read(path, 16).error().code, ReadError::TooLarge);
+        writeFixture(path, {});
+        QCOMPARE(SysfsReader::read(path, 16).error().code, ReadError::Empty);
+        writeFixture(path, "  \n");
+        QCOMPARE(SysfsReader::text(path).error().code, ReadError::Empty);
+        if (::geteuid() == 0)
+            QSKIP("Permission denial requires an unprivileged test process");
+        QVERIFY(QFile::setPermissions(path, {}));
+        QCOMPARE(SysfsReader::read(path, 16).error().code, ReadError::PermissionDenied);
+        QVERIFY(QFile::setPermissions(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner));
+    }
+
+    void notificationsSelectionAndStaleState() {
+        QMutex mutex;
+        ScanResult next;
+        next.devices = {sampleDevice()};
+        DeviceDiscovery discovery(
+            [&](bool) {
+                QMutexLocker lock(&mutex);
+                return next;
+            },
+            nullptr, std::chrono::milliseconds::zero());
+        QTRY_VERIFY(!discovery.busy());
+        QCOMPARE(discovery.selectedDevice()->connectionId(), QString("1-1#1"));
+        QSignalSpy changed(&discovery, &DeviceDiscovery::devicesChanged);
+        auto refresh = [&] { discovery.refresh(); };
+        refresh();
+        QTRY_VERIFY(!discovery.busy());
+        QCOMPARE(changed.count(), 0);
+        {
+            QMutexLocker lock(&mutex);
+            next.devices.prepend(sampleDevice("0-1", "0-1#2"));
+        }
+        refresh();
+        QTRY_VERIFY(!discovery.busy());
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(discovery.selectedDevice()->connectionId(), QString("1-1#1"));
+        {
+            QMutexLocker lock(&mutex);
+            next.status = ScanStatus::Unavailable;
+            next.devices.clear();
+        }
+        refresh();
+        QTRY_VERIFY(!discovery.busy());
+        QVERIFY(discovery.stale());
+        QVERIFY(!discovery.selectedDevice()->connected());
+        QCOMPARE(discovery.snapshot().devices.size(), 2);
+        {
+            QMutexLocker lock(&mutex);
+            next.status = ScanStatus::Ready;
+            next.devices = {sampleDevice("1-1", "1-1#3")};
+        }
+        refresh();
+        QTRY_VERIFY(!discovery.busy());
+        QVERIFY(!discovery.selectedDevice()->connected()); // Same port is not the same connection.
+        discovery.selectDevice("1-1#3");
+        QVERIFY(discovery.selectedDevice()->connected());
+        discovery.selectDevice("missing");
+        QCOMPARE(discovery.selectedDevice()->connectionId(), QString("1-1#3"));
+    }
+
+    void timerUsesWorkerAndCoalesces() {
+        std::atomic<int> calls = 0;
+        std::atomic<bool> offMain = false;
+        QSemaphore entered, release;
+        DeviceDiscovery discovery(
+            [&](bool) {
+                offMain = QThread::currentThread() != thread();
+                const auto call = ++calls;
+                if (call == 1) {
+                    entered.release();
+                    release.acquire();
+                }
+                ScanResult result;
+                result.devices = {sampleDevice("1-1", QString::number(call))};
+                return result;
+            },
+            nullptr, std::chrono::milliseconds::zero());
+        QVERIFY(entered.tryAcquire(1, 3000));
+        QSignalSpy changed(&discovery, &DeviceDiscovery::devicesChanged);
+        for (int i = 0; i < 20; ++i)
+            discovery.refresh(true);
+        release.release();
+        QTRY_VERIFY(!discovery.busy());
+        QVERIFY(offMain);
+        QCOMPARE(calls.load(), 2);
+        QCOMPARE(changed.count(), 1); // Invalidated result never published.
+        QCOMPARE(discovery.selectedDevice()->connectionId(), QString("2"));
+
+        DeviceDiscovery polling([](bool) { return ScanResult{}; }, nullptr, std::chrono::milliseconds{10});
+        QSignalSpy finished(&polling, &DeviceDiscovery::scanFinished);
+        QTRY_VERIFY(finished.count() >= 2);
+    }
+
+    void joinsOwnedScanner() {
+        auto value = std::make_unique<int>(42);
+        DeviceDiscovery discovery(
+            [owned = std::move(value)](bool) {
+                check(*owned == 42, "move-only scanner ownership");
+                return ScanResult{};
+            },
+            nullptr, std::chrono::milliseconds::zero());
+        QTRY_VERIFY(!discovery.busy());
+    }
+
+    void pollsDoNotQueueBehindSlowScan() {
+        std::atomic<int> calls = 0;
+        QSemaphore entered, release;
+        DeviceDiscovery discovery(
+            [&](bool) {
+                if (++calls == 1) {
+                    entered.release();
+                    release.acquire();
+                }
+                return ScanResult{};
+            },
+            nullptr, std::chrono::milliseconds{1});
+        const bool started = entered.tryAcquire(1, 3000);
+        if (!started)
+            release.release();
+        QVERIFY(started);
+        int ticks = 0;
+        QTimer timer;
+        connect(&timer, &QTimer::timeout, this, [&] { ++ticks; });
+        timer.start(1);
+        QTRY_VERIFY(ticks >= 3);
+        int callsAtFirstCompletion = 0;
+        connect(&discovery, &DeviceDiscovery::scanFinished, this, [&] {
+            if (callsAtFirstCompletion == 0)
+                callsAtFirstCompletion = calls.load();
+        });
+        release.release();
+        QTRY_VERIFY(callsAtFirstCompletion > 0);
+        QCOMPARE(callsAtFirstCompletion, 1);
+    }
+};
+
+QTEST_GUILESS_MAIN(DiscoveryTest)
+#include "discovery_test.moc"

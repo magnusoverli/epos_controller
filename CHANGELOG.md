@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+- Addressed the codebase review with robust CLI parsing, asynchronous typed discovery and HID caching, explicit device selection, accessible lazy UI, MIT licensing, Qt deployment, CI, and regression/fuzz tests.
+- Imported and integrity-checked the Windows headset evidence bundle with sidetone/ANC captures and candidate protocol findings.
+- Added a complete codebase review with verified defects, performance measurements, and prioritized refactoring and modernization recommendations.
 - Prepared a source-only repository with standalone build instructions, excluding local plans, research, captures and vendor downloads.
 - Added firmware updates to the roadmap, covering discovery, package validation, installation, progress, verification and recovery.
 - Reconciled the project plan with completed SDK/C++ work, consolidated duplicate tasks, and clarified evidence-dependent settings milestones and remaining release checks.

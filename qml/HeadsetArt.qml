@@ -11,7 +11,7 @@ Item {
         onPaint: {
             const c = getContext("2d")
             c.reset()
-            c.strokeStyle = "#25383d"
+            c.strokeStyle = Theme.artwork
             c.lineWidth = 17
             c.lineCap = "round"
             c.beginPath()

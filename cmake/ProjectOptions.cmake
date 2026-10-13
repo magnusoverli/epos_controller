@@ -15,7 +15,9 @@ function(headset_target_options target)
             _GLIBCXX_ASSERTIONS
             "$<$<CONFIG:Release,RelWithDebInfo>:_FORTIFY_SOURCE=3>"
         )
-        target_link_options(${target} PRIVATE -Wl,-z,relro,-z,now,-z,noexecstack)
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            target_link_options(${target} PRIVATE -Wl,-z,relro,-z,now,-z,noexecstack)
+        endif()
         if(HEADSET_SANITIZERS)
             target_compile_options(${target} PRIVATE
                 -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
@@ -23,5 +25,11 @@ function(headset_target_options target)
         endif()
     elseif(HEADSET_SANITIZERS)
         message(FATAL_ERROR "HEADSET_SANITIZERS requires GCC or Clang")
+    endif()
+endfunction()
+
+function(headset_strict_warnings target)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(${target} PRIVATE -Wconversion -Wsign-conversion -Wshadow)
     endif()
 endfunction()
