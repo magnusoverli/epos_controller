@@ -59,3 +59,15 @@ inline DeviceSnapshot sampleDevice(QString key = "1-1", QString connection = "1-
     device.usbId = QStringLiteral("1395:018e");
     return device;
 }
+
+inline DeviceSnapshot sampleSettingsDevice(QString key = "1-1", QString connection = "1-1#1") {
+    auto device = sampleDevice(std::move(key), std::move(connection));
+    HidInterface interface;
+    interface.node = "/fixture/hidraw0";
+    interface.interfaceNumber = "03";
+    interface.canRead = interface.canWrite = true;
+    interface.layout = HidDescriptor::Description{
+        {0xffff}, {{HidDescriptor::ReportKind::Input, 1, 106}, {HidDescriptor::ReportKind::Output, 1, 106}}};
+    device.hidInterfaces.append(interface);
+    return device;
+}

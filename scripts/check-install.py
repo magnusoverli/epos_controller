@@ -23,10 +23,17 @@ with tempfile.TemporaryDirectory(prefix="headset-install-") as directory:
     relocated = root / "relocated"
     shutil.move(original, relocated)
     binary = relocated / "bin/headset-controller"
+    helpers = list(relocated.rglob("headset-access-helper"))
+    assert len(helpers) == 1, "Missing or ambiguous access setup helper"
+    helper = helpers[0]
     env = os.environ.copy()
     for key in ["LD_LIBRARY_PATH", "QML_IMPORT_PATH", "QML2_IMPORT_PATH", "QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH"]:
         env.pop(key, None)
     env.update(QT_QPA_PLATFORM="offscreen", QT_QUICK_BACKEND="software", DISPLAY="", WAYLAND_DISPLAY="")
+    # Read-only mode: never authorize or install a host rule during deployment tests.
+    embedded_rule = subprocess.check_output([helper, "--print-rule"], env=env, timeout=15)
+    assert embedded_rule == (relocated / "share/headset-controller/70-headset-controller.rules").read_bytes()
+    assert "libQt6" not in subprocess.check_output(["ldd", helper], env=env, text=True)
     result = subprocess.run([binary, "--diagnostics"], env=env, check=True, capture_output=True, text=True, timeout=15)
     document = json.loads(result.stdout)
     assert document["schemaVersion"] == 1

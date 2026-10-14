@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Native dependencies
-        run: sudo apt-get update && sudo apt-get install -y g++-14 ninja-build libudev-dev libgl-dev libegl-dev libxkbcommon-dev libvulkan-dev libgssapi-krb5-2 libfontconfig1 libx11-xcb1 libxcb-cursor0
+        run: sudo apt-get update && sudo apt-get install -y g++-14 ninja-build libudev-dev libarchive-dev libgl-dev libegl-dev libxkbcommon-dev libvulkan-dev libgssapi-krb5-2 libfontconfig1 libx11-xcb1 libxcb-cursor0
       - uses: jurplel/install-qt-action@v4
         with:
           version: '6.12.0'

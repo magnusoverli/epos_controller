@@ -36,6 +36,16 @@ for arguments, message in [
     (["--diagnostics", "--page", "0"], "cannot be combined"),
     (["--diagnostics", "-platform", "offscreen"], "cannot be combined"),
     (["--screenshot="], "cannot be empty"),
+    (["--read-settings", "--diagnostics"], "Choose only one"),
+    (["--read-firmware", "--read-settings"], "Choose only one"),
+    (["--read-firmware", "--smoke-test"], "cannot be combined"),
+    (["--inspect-firmware", "package.zip"], "requires nonempty"),
+    (["--firmware-offer", "offer.json"], "require --inspect-firmware"),
+    (["--inspect-firmware", "package.zip", "--firmware-offer", "offer.json", "--read-firmware"], "Choose only one"),
+    (["--inspect-firmware", "package.zip", "--firmware-offer", "offer.json", "--smoke-test"], "cannot be combined"),
+    (["--read-settings", "--page", "2"], "cannot be combined"),
+    (["--device", "1-1"], "requires --read-settings"),
+    (["--read-settings", "--device="], "cannot be empty"),
 ]:
     result = run(arguments, 2, message)
     assert not result.stdout
@@ -47,6 +57,11 @@ assert diagnostics["schemaVersion"] == 1
 assert diagnostics["scanStatus"] in ["ready", "partial", "unavailable"]
 assert (result.returncode == 3) == (diagnostics["scanStatus"] == "unavailable")
 assert isinstance(diagnostics["issues"], list)
+# Deliberately select a nonexistent key: CLI tests must never send to real hardware.
+result = run(["--read-settings", "--device", "test-no-such-device"], 4)
+assert "error" in json.loads(result.stdout)
+result = run(["--read-firmware", "--device", "test-no-such-device"], 4)
+assert "error" in json.loads(result.stdout)
 
 with tempfile.TemporaryDirectory(prefix="headset-cli-") as directory:
     # These values previously selected QCoreApplication and aborted window creation.

@@ -97,7 +97,20 @@ void DeviceDiscovery::publish(ScanResult result) {
     m_snapshot = std::move(result);
     if (!m_everSelected && !m_snapshot.stale && !m_snapshot.devices.isEmpty()) {
         m_selection = m_snapshot.devices.first().connectionId;
+        m_selectedKey = m_snapshot.devices.first().key;
+        m_selectedUsbId = m_snapshot.devices.first().usbId;
         m_everSelected = true;
+    }
+    // Follow the selected model on its USB port after reset/re-enumeration. The new
+    // connection ID still invalidates every outstanding operation and confirmation.
+    if (!m_snapshot.stale && m_everSelected && std::ranges::none_of(m_snapshot.devices, [&](const auto &d) {
+            return d.connectionId == m_selection;
+        })) {
+        const auto matches = [&](const auto &d) {
+            return d.key == m_selectedKey && d.usbId == m_selectedUsbId;
+        };
+        if (std::ranges::count_if(m_snapshot.devices, matches) == 1)
+            m_selection = std::ranges::find_if(m_snapshot.devices, matches)->connectionId;
     }
     updateSelection();
     if (changed)
@@ -112,6 +125,8 @@ void DeviceDiscovery::selectDevice(const QString &connectionId) {
     if (found == m_snapshot.devices.end())
         return;
     m_selection = connectionId;
+    m_selectedKey = found->key;
+    m_selectedUsbId = found->usbId;
     m_everSelected = true;
     updateSelection();
 }

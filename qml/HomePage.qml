@@ -6,8 +6,11 @@ import QtQuick.Layouts
 Item {
     id: root
     required property SelectedDevice device
+    required property SettingsController controller
+    required property FirmwareController firmware
     signal refreshRequested()
     signal settingsRequested()
+    signal updatesRequested()
 
     Column {
         visible: !root.device.connected
@@ -27,8 +30,10 @@ Item {
             HeadsetArt { Layout.alignment: Qt.AlignHCenter; Layout.fillHeight: true; Layout.minimumHeight: 100 }
             Heading { objectName: "deviceName"; text: root.device.name; Layout.fillWidth: true; wrapMode: Text.Wrap; maximumLineCount: 3; elide: Text.ElideRight }
             Label { text: qsTr("Connected · %1").arg(root.device.usbId); textFormat: Text.PlainText; color: Theme.muted }
+            Label { objectName: "homeFirmwareVersion"; text: qsTr("Firmware: %1").arg(root.controller.firmwareVersion || qsTr("unknown")); textFormat: Text.PlainText; color: Theme.muted }
+            OutlineButton { objectName: "firmwareUpdateNotice"; visible: root.firmware.updateAvailable; text: qsTr("Firmware %1 available →").arg(root.firmware.latestVersion); onClicked: root.updatesRequested() }
             OutlineButton { objectName: "deviceSettingsButton"; text: qsTr("Device settings  →"); onClicked: root.settingsRequested() }
-            Label { text: qsTr("Settings access not yet implemented"); color: Theme.muted; font.pixelSize: Theme.smallSize }
+            Label { text: qsTr("Settings load automatically when opened"); color: Theme.muted; font.pixelSize: Theme.smallSize }
         }
     }
 }

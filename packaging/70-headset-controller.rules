@@ -1,0 +1,4 @@
+# Grant the active local desktop seat access to the settings and firmware HID interfaces.
+# Separate parent matches: USB VID/PID and interface number live on different ancestors.
+ACTION=="add|change", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1395", ATTRS{idProduct}=="018e", ENV{.HEADSET_CONTROLLER}="1"
+ACTION=="add|change", SUBSYSTEM=="hidraw", ENV{.HEADSET_CONTROLLER}=="1", ATTRS{bInterfaceNumber}=="03|04", TAG+="uaccess"

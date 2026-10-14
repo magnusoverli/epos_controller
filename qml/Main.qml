@@ -8,9 +8,25 @@ ApplicationWindow {
     id: window
     required property DiscoveryModel discovery
     required property DiagnosticsController diagnosticsController
+    required property SettingsController settingsController
+    required property FirmwareController firmwareController
+    required property NotificationController notificationController
+    required property DeviceAccessSetup accessSetup
     property int page: Pages.Home
     property bool deviceSettings: false
+    property bool automaticSettingsReads: true
+    onClosing: function(close) {
+        if (firmwareController.installing) {
+            close.accepted = false
+            page = Pages.Updates
+        }
+    }
     readonly property SelectedDevice device: discovery.selectedDevice
+    Binding {
+        target: window.settingsController
+        property: "active"
+        value: window.automaticSettingsReads && window.page === Pages.Settings && window.deviceSettings
+    }
     function showDiagnostics() {
         diagnostics.returnFocus = activeFocusItem
         diagnostics.open()
@@ -21,28 +37,45 @@ ApplicationWindow {
     minimumWidth: 960
     minimumHeight: 650
     visible: true
-    title: Qt.application.name + qsTr(" — read-only prototype")
+    title: Qt.application.name + qsTr(" — Linux preview")
     color: Theme.surface
     font.family: "Sans Serif"
     font.pixelSize: Theme.bodySize
 
     Label { x: 44; y: 26; text: Qt.application.name.toUpperCase(); font.pixelSize: 25; color: Theme.ink; textFormat: Text.PlainText }
-    Label { anchors.right: parent.right; anchors.rightMargin: 44; y: 36; text: qsTr("LINUX  /  READ-ONLY PREVIEW"); color: Theme.muted; font.pixelSize: Theme.smallSize }
+    Label { anchors.right: parent.right; anchors.rightMargin: 44; y: 36; text: qsTr("LINUX  /  SETTINGS PREVIEW"); color: Theme.muted; font.pixelSize: Theme.smallSize }
     RowLayout {
         anchors { left: parent.left; right: parent.right; leftMargin: 45; rightMargin: 70; top: parent.top; topMargin: 64 }
         Label {
             objectName: "discoveryStatus"
-            text: window.discovery.message
+            text: window.accessSetup.busy || (window.settingsController.needsAccess && window.accessSetup.message.length > 0)
+                  ? window.accessSetup.message : window.discovery.message
             textFormat: Text.PlainText
             color: Theme.muted
             Layout.fillWidth: true
             elide: Text.ElideRight
+            ToolTip.visible: statusHover.hovered && text.length > 0
+            ToolTip.text: text
+            HoverHandler { id: statusHover }
+        }
+        OutlineButton {
+            objectName: "globalFirmwareUpdateNotice"
+            visible: window.firmwareController.updateAvailable || window.firmwareController.installing
+            text: window.firmwareController.installing ? qsTr("Firmware installation…") : qsTr("Firmware %1 available").arg(window.firmwareController.latestVersion)
+            onClicked: window.page = Pages.Updates
+        }
+        OutlineButton {
+            objectName: "retryAccessSetup"
+            visible: window.accessSetup.canRetry
+            enabled: !window.settingsController.busy
+            text: qsTr("Retry access setup")
+            onClicked: window.accessSetup.enableAccess()
         }
         ComboBox {
             id: selector
             objectName: "deviceSelector"
             visible: window.discovery.devices.length > 0 && (!window.device.connected || window.discovery.devices.length > 1)
-            enabled: !window.discovery.stale
+            enabled: !window.discovery.stale && !window.firmwareController.installing
             Layout.maximumWidth: 300
             model: window.discovery.devices
             textRole: "name"
@@ -87,20 +120,29 @@ ApplicationWindow {
             selected: window.page === Pages.Home
             sourceComponent: HomePage {
                 device: window.device
+                controller: window.settingsController
+                firmware: window.firmwareController
                 onRefreshRequested: window.discovery.refresh(true)
                 onSettingsRequested: { window.deviceSettings = true; window.page = Pages.Settings }
+                onUpdatesRequested: window.page = Pages.Updates
             }
         }
         LazyPage {
             objectName: "updatesLoader"
             selected: window.page === Pages.Updates
-            sourceComponent: UpdatesPage { device: window.device }
+            sourceComponent: UpdatesPage {
+                device: window.device
+                controller: window.settingsController
+                firmware: window.firmwareController
+            }
         }
         LazyPage {
             objectName: "settingsLoader"
             selected: window.page === Pages.Settings
             sourceComponent: SettingsPage {
                 device: window.device
+                controller: window.settingsController
+                notifications: window.notificationController
                 deviceSettings: window.deviceSettings
                 onToggleRequested: window.deviceSettings = !window.deviceSettings
             }
@@ -134,8 +176,8 @@ ApplicationWindow {
                 id: navButton
                 required property var modelData
                 objectName: "nav-" + modelData.page
-                width: 65
-                height: 52
+                width: 88
+                height: 64
                 focusPolicy: Qt.StrongFocus
                 hoverEnabled: true
                 Accessible.name: modelData.label
@@ -149,7 +191,11 @@ ApplicationWindow {
                     border.width: navButton.visualFocus ? 3 : 0
                     border.color: Theme.focus
                 }
-                contentItem: Text { text: navButton.modelData.icon; font.pixelSize: 29; color: Theme.ink; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Column {
+                    spacing: 2
+                    Text { width: parent.width; text: navButton.modelData.icon; font.pixelSize: 25; color: Theme.ink; horizontalAlignment: Text.AlignHCenter }
+                    Text { width: parent.width; text: navButton.modelData.label; font.pixelSize: Theme.smallSize; color: Theme.ink; horizontalAlignment: Text.AlignHCenter }
+                }
                 onClicked: { window.page = modelData.page; if (modelData.page === Pages.Settings) window.deviceSettings = window.device.connected }
             }
         }

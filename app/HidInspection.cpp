@@ -77,6 +77,8 @@ QVector<HidInterface> HidInspection::scan(const QString &usbPath, const QString 
                 m_cache.remove(entry.path);
         }
         info.node = QDir(devRoot).filePath(entry.name);
+        info.sysfsPath = entry.path;
+        info.sysfsIdentity = SysfsReader::identity(entry.path, false);
         const auto native = QFile::encodeName(info.node);
         info.canRead = ::access(native.constData(), R_OK) == 0;
         info.canWrite = ::access(native.constData(), W_OK) == 0;

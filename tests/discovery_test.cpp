@@ -123,7 +123,8 @@ class DiscoveryTest : public QObject {
         }
         refresh();
         QTRY_VERIFY(!discovery.busy());
-        QVERIFY(!discovery.selectedDevice()->connected()); // Same port is not the same connection.
+        QVERIFY(discovery.selectedDevice()->connected()); // Selection follows port, operations use new ID.
+        QCOMPARE(discovery.selectedDevice()->connectionId(), QString("1-1#3"));
         discovery.selectDevice("1-1#3");
         QVERIFY(discovery.selectedDevice()->connected());
         discovery.selectDevice("missing");

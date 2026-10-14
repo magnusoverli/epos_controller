@@ -43,6 +43,8 @@ class DeviceDiscovery final : public QObject {
     ScanResult m_snapshot;
     SelectedDevice m_selected;
     QString m_selection;
+    QString m_selectedKey;
+    QString m_selectedUsbId;
     bool m_everSelected = false;
     bool m_busy = false;
     bool m_pending = false;

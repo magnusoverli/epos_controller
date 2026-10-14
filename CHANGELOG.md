@@ -1,6 +1,29 @@
 # Changelog
 
 ## [Unreleased]
+- Settings sections now start collapsed and support click/keyboard expansion; removed the Test notification button.
+- Keep settings responsive during background readback; sidetone saves on mouse/touch release without Apply or keyboard adjustment, with clearer errors and navigation.
+- Allow user-initiated installation of future official firmware releases using the captured update flow and live catalog hashes, without a version allowlist.
+- Add capture-backed in-app firmware installation for IMPACT 860T ANC 1.5.64 → 1.5.619, with verified downloads, reboot tracking and interrupted-update protection.
+- Headset access setup now includes the firmware HID interface, which the EPOS web updater needs to start an update.
+- Documented non-flashing firmware protocol research, including ownership encoding, retry limits and corroborated transfer/validation uncertainties.
+- Firmware now displays on Home and Device settings, checks EPOS's live catalog automatically and flags newer releases; removed saved-offer and local-ZIP controls.
+- Fixed incremental packaging so newly imported QML modules, including file dialogs, are included in installed builds.
+- Updates now loads saved firmware offers, downloads official packages over HTTPS, inspects local ZIPs asynchronously and compares versions with the selected headset.
+- Added offline firmware ZIP inspection against an exported offer, including member hashes, manifest checks, container bounds and numeric version comparison.
+- Read the headset's firmware version automatically and display it on the Updates page, with in-app refresh.
+- Play speaking-while-muted audio alerts directly through the selected headset instead of relying on desktop notification sound hints.
+- Fixed reset/reconnect selection and delayed access setup until USB permissions settle, avoiding application restarts.
+- Added Linux desktop mute notifications and speech-triggered interval controls using captured headset events, with per-USB-port preferences.
+- Added the IMPACT 860T ANC's seven voice-prompt language choices with automatic reads and verified setting readback.
+- Kept settings dropdowns tied to their original feature while scrolling, preventing recycled rows from targeting another control.
+- Added Auto Pause, tone/voice prompt controls and a confirmed Factory Reset action with fresh readback and no automatic reset retries.
+- Added audio limiter, answer-on-wear, mute-on-removal and Smart Pause controls with full 16-setting readback verification.
+- Automatically offers one-time system authorization for persistent headset access, activates the udev rule and reloads settings, with no repeated prompts after cancellation.
+- Added eight more headset controls: boom-arm answer/mute, boom side, in-call prompt suppression, ringtone, Busylight, Talk While Muted and buttons, with complete readback verification.
+- Device settings now load automatically on opening the page or changing the selected connection, with Refresh/Retry for recovery.
+- Expanded sidetone to 0–100% and added TalkThrough and Low ANC using traced Windows-adapter mappings, with explicit sidetone Apply and lossless readback.
+- Added live-tested sidetone/ANC controls with asynchronous HID transport, verified readback, packet-fixture tests, and a roadmap to full Windows feature parity.
 - Addressed the codebase review with robust CLI parsing, asynchronous typed discovery and HID caching, explicit device selection, accessible lazy UI, MIT licensing, Qt deployment, CI, and regression/fuzz tests.
 - Imported and integrity-checked the Windows headset evidence bundle with sidetone/ANC captures and candidate protocol findings.
 - Added a complete codebase review with verified defects, performance measurements, and prioritized refactoring and modernization recommendations.

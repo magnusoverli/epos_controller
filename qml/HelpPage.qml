@@ -13,12 +13,12 @@ RowLayout {
     }
     HelpCard {
         heading: qsTr("Connection Status")
-        detail: (root.device.connected ? qsTr("%1 connected\nUSB: %2\nHID interfaces detected: %3").arg(root.device.name).arg(root.device.usbId).arg(root.device.interfaceCount) : qsTr("No headset selected or connected")) + qsTr("\n\nDiscovery: Linux sysfs + udev\n\nNo SDK loaded\nNo USB commands sent\nNo cloud connection")
+        detail: (root.device.connected ? qsTr("%1 connected\nUSB: %2\nHID interfaces detected: %3").arg(root.device.name).arg(root.device.usbId).arg(root.device.interfaceCount) : qsTr("No headset selected or connected")) + qsTr("\n\nDiscovery: Linux sysfs + udev\nSettings: Linux HID\nFirmware catalog: EPOS HTTPS API\n\nNo vendor SDK loaded")
         diagnostics: true
         onDiagnosticsRequested: root.diagnosticsRequested()
     }
     HelpCard {
-        heading: qsTr("Prototype Scope")
-        detail: qsTr("Live device discovery\nRead-only device identity\nScreenshot-inspired navigation\n\nSettings transport: unverified\nFirmware updates: not implemented\n\nScreenshot values are never presented as live device values.")
+        heading: qsTr("Features")
+        detail: qsTr("Automatic update checks and in-app firmware installation\n19 settings with background readback\nConfirmed factory reset\nDesktop mute notifications and headset audio alerts\n\nApplication preferences are still in development.")
     }
 }

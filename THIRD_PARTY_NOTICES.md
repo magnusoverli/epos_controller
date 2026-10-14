@@ -7,7 +7,8 @@ linked into or installed with the application.
 
 ## Qt
 
-The application dynamically links Qt Core, Gui, Qml, Quick and Quick Controls,
+The application dynamically links Qt Core, Gui, Qml, Quick, Quick Controls,
+Network and DBus,
 including their runtime plugins and QML imports. Qt is copyright The Qt Company
 Ltd. and other contributors. The supported SDK baseline is Qt 6.12.
 
@@ -28,6 +29,14 @@ The default CMake install deploys matching shared libraries using Qt's deploymen
 API. It is a relocatable development staging layout; a public release must also
 include its SDK's licensing material and corresponding-source distribution.
 Do not infer that a runtime smoke test establishes these distribution obligations.
+
+## libarchive
+
+Offline firmware ZIP inspection dynamically links libarchive. It is distributed
+under BSD-style terms; its source, per-file notices and dependency details are at
+https://github.com/libarchive/libarchive (see `COPYING`). Binary distributors must
+retain the applicable notices for the version and compression libraries shipped.
+The inspected vendor firmware stays outside the application distribution.
 
 ## Linux runtime
 

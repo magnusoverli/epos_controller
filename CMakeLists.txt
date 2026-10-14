@@ -48,16 +48,51 @@ endif()
 if(HEADSET_PARSER_ONLY)
     return()
 endif()
+add_library(headset-settings STATIC
+    app/notifications/MuteEvents.cpp app/notifications/MuteEvents.h
+    app/settings/SettingsTypes.cpp app/settings/SettingsTypes.h
+    app/settings/EditQueue.h
+    app/settings/EposProtocol.cpp app/settings/EposProtocol.h
+    app/settings/ReportTransport.h app/settings/SettingsSession.cpp app/settings/SettingsSession.h)
+set_target_properties(headset-settings PROPERTIES AUTOMOC OFF AUTOUIC OFF)
+target_include_directories(headset-settings PUBLIC app)
+headset_target_options(headset-settings)
+headset_strict_warnings(headset-settings)
+if(BUILD_TESTING)
+    add_executable(settings-protocol-test tests/settings_protocol_test.cpp)
+    target_link_libraries(settings-protocol-test PRIVATE headset-settings)
+    headset_target_options(settings-protocol-test)
+    add_test(NAME settings-protocol COMMAND settings-protocol-test)
+endif()
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "The device backend supports Linux; use HEADSET_PARSER_ONLY for portable parser builds")
 endif()
 
 # The supported baseline is now the SDK actually verified by this project.
-find_package(Qt6 6.12 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
+find_package(Qt6 6.12 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 DBus Network)
+find_package(LibArchive REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(UDEV REQUIRED IMPORTED_TARGET libudev)
 qt_standard_project_setup(REQUIRES 6.12)
+include(GNUInstallDirs)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/packaging/70-headset-controller.rules" HEADSET_UDEV_RULE)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS packaging/70-headset-controller.rules)
+file(RELATIVE_PATH HEADSET_ACCESS_HELPER_RELATIVE "${CMAKE_INSTALL_FULL_BINDIR}"
+    "${CMAKE_INSTALL_FULL_LIBEXECDIR}/headset-controller/headset-access-helper")
+configure_file(app/access/UdevRule.h.in generated/UdevRule.h @ONLY)
 configure_file(app/BuildInfo.h.in generated/BuildInfo.h @ONLY)
+
+add_library(headset-rule-installer STATIC app/access/RuleInstaller.cpp app/access/RuleInstaller.h)
+set_target_properties(headset-rule-installer PROPERTIES AUTOMOC OFF AUTOUIC OFF)
+target_include_directories(headset-rule-installer PUBLIC app/access)
+headset_target_options(headset-rule-installer)
+headset_strict_warnings(headset-rule-installer)
+add_executable(headset-access-helper app/access/main.cpp)
+set_target_properties(headset-access-helper PROPERTIES AUTOMOC OFF AUTOUIC OFF)
+target_include_directories(headset-access-helper PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_link_libraries(headset-access-helper PRIVATE headset-rule-installer PkgConfig::UDEV)
+headset_target_options(headset-access-helper)
+headset_strict_warnings(headset-access-helper)
 
 add_library(headset-core STATIC
     app/CommandLine.cpp app/CommandLine.h app/Pages.h
@@ -69,12 +104,32 @@ add_library(headset-core STATIC
     app/HidInspection.cpp app/HidInspection.h
     app/HidDescriptorPresentation.cpp app/HidDescriptorPresentation.h
     app/Diagnostics.cpp app/Diagnostics.h
+    app/settings/LinuxHidTransport.cpp app/settings/LinuxHidTransport.h
+    app/SettingsController.cpp app/SettingsController.h
+    app/SettingsPresentation.cpp app/SettingsPresentation.h
+    app/FirmwareController.cpp app/FirmwareController.h
+    app/DeviceAccessSetup.cpp app/DeviceAccessSetup.h
+    app/NotificationController.cpp app/NotificationController.h
+    app/notifications/AlertSound.cpp app/notifications/AlertSound.h
+    app/firmware/PackageInspection.cpp app/firmware/PackageInspection.h app/firmware/FirmwareVersion.h
+    app/firmware/PackageDownload.cpp app/firmware/PackageDownload.h
+    app/firmware/ReleaseCatalog.cpp app/firmware/ReleaseCatalog.h
+    app/firmware/ApplicationUpdate.cpp app/firmware/ApplicationUpdate.h
+    app/firmware/LinuxUpdate.cpp app/firmware/LinuxUpdate.h
+    app/firmware/UpdateJournal.cpp app/firmware/UpdateJournal.h
 )
 headset_target_options(headset-core)
 headset_strict_warnings(headset-core)
 target_include_directories(headset-core PUBLIC app "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_link_libraries(headset-core PUBLIC Qt6::Core hid-descriptor)
+target_link_libraries(headset-core PUBLIC Qt6::Core Qt6::DBus Qt6::Network hid-descriptor headset-settings)
+target_link_libraries(headset-core PRIVATE LibArchive::LibArchive)
 qt_extract_metatypes(headset-core)
+
+# Explicit manual build/run only; never part of tests, deployment or normal startup.
+add_executable(headset-settings-probe EXCLUDE_FROM_ALL tests/hardware_settings_probe.cpp)
+target_link_libraries(headset-settings-probe PRIVATE headset-core)
+headset_target_options(headset-settings-probe)
+headset_strict_warnings(headset-settings-probe)
 
 set_source_files_properties(qml/Theme.qml qml/SettingsCatalog.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_qml_module(headset-ui STATIC
@@ -87,11 +142,18 @@ qt_add_qml_module(headset-ui STATIC
         qml/Main.qml qml/Theme.qml qml/Panel.qml qml/Heading.qml
         qml/OutlineButton.qml qml/HeadsetArt.qml qml/HomePage.qml qml/UpdatesPage.qml
         qml/SettingsCatalog.qml qml/SettingsPage.qml qml/HelpPage.qml qml/HelpCard.qml
-        qml/DiagnosticsDialog.qml qml/LazyPage.qml
+        qml/DiagnosticsDialog.qml qml/LazyPage.qml qml/PercentSetting.qml qml/FactoryResetDialog.qml
+        qml/SettingEditor.qml
 )
 target_link_libraries(headset-ui PUBLIC headset-core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2)
 headset_target_options(headset-ui)
 qt_add_executable(headset-controller app/main.cpp app/DeviceMonitor.cpp app/DeviceMonitor.h)
+# Qt 6.12's build-time deployment scanner tracks only the executable's QML files,
+# not those owned by linked static QML modules. Mirror the source list so edits
+# introducing imports also invalidate the deployment scan on incremental builds.
+get_target_property(headset_qml_files headset-ui QT_QML_MODULE_QML_FILES)
+set_property(TARGET headset-controller PROPERTY QT_QML_MODULE_QML_FILES "${headset_qml_files}")
+add_dependencies(headset-controller headset-access-helper)
 target_link_libraries(headset-controller PRIVATE headset-ui headset-uiplugin PkgConfig::UDEV)
 headset_target_options(headset-controller)
 headset_strict_warnings(headset-controller)
@@ -100,18 +162,33 @@ add_custom_target(headset-controller_qmllint DEPENDS headset-ui_qmllint)
 if(BUILD_TESTING)
     find_package(Qt6 6.12 REQUIRED COMPONENTS Test)
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    find_program(DBUS_RUN_SESSION dbus-run-session REQUIRED)
     function(headset_ui_test name)
         set_tests_properties(${name} PROPERTIES
             ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 20)
     endfunction()
-    foreach(test IN ITEMS discovery hid)
+    foreach(test IN ITEMS discovery hid settings notifications firmware firmware-update)
         qt_add_executable(${test}-test tests/${test}_test.cpp)
         target_link_libraries(${test}-test PRIVATE headset-core Qt6::Test)
         headset_target_options(${test}-test)
-        add_test(NAME ${test} COMMAND ${test}-test)
+        if(test STREQUAL "notifications")
+            add_test(NAME ${test} COMMAND "${DBUS_RUN_SESSION}" -- $<TARGET_FILE:notifications-test>)
+            set_tests_properties(${test} PROPERTIES ENVIRONMENT "HEADSET_TEST_PRIVATE_BUS=1")
+        else()
+            add_test(NAME ${test} COMMAND ${test}-test)
+        endif()
         set_tests_properties(${test} PROPERTIES TIMEOUT 20)
     endforeach()
+    target_link_libraries(firmware-update-test PRIVATE LibArchive::LibArchive)
+    qt_add_executable(device-access-test tests/device_access_test.cpp)
+    target_link_libraries(device-access-test PRIVATE headset-core headset-rule-installer Qt6::Test)
+    headset_target_options(device-access-test)
+    add_dependencies(device-access-test headset-access-helper)
+    add_test(NAME device-access COMMAND device-access-test)
+    set_tests_properties(device-access PROPERTIES TIMEOUT 30
+        ENVIRONMENT "HEADSET_ACCESS_HELPER=$<TARGET_FILE:headset-access-helper>")
     qt_add_executable(ui-test tests/ui_test.cpp)
+    set_property(TARGET ui-test PROPERTY QT_QML_MODULE_QML_FILES "${headset_qml_files}")
     target_link_libraries(ui-test PRIVATE headset-ui headset-uiplugin Qt6::Test)
     headset_target_options(ui-test)
     add_test(NAME ui-interaction COMMAND ui-test)
@@ -123,6 +200,8 @@ if(BUILD_TESTING)
     headset_ui_test(ui-startup)
     add_test(NAME cli COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_test.py" $<TARGET_FILE:headset-controller>)
     set_tests_properties(cli PROPERTIES TIMEOUT 60)
+    add_test(NAME firmware-package COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/firmware_package_test.py" $<TARGET_FILE:headset-controller>)
+    set_tests_properties(firmware-package PROPERTIES TIMEOUT 60)
 endif()
 if(HEADSET_BENCHMARKS)
     qt_add_executable(discovery-benchmark tests/discovery_benchmark.cpp)
@@ -130,17 +209,18 @@ if(HEADSET_BENCHMARKS)
     headset_target_options(discovery-benchmark)
 endif()
 
-include(GNUInstallDirs)
 install(TARGETS headset-controller RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS headset-access-helper RUNTIME DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/headset-controller)
 if(HEADSET_DEPLOY_QT)
     qt_generate_deploy_qml_app_script(TARGET headset-controller OUTPUT_SCRIPT deploy_script
         NO_TRANSLATIONS INCLUDE_PLUGINS qoffscreen qwayland qwayland-egl)
     install(SCRIPT ${deploy_script})
 endif()
-install(FILES LICENSE THIRD_PARTY_NOTICES.md DESTINATION ${CMAKE_INSTALL_DATADIR}/headset-controller)
+install(FILES LICENSE THIRD_PARTY_NOTICES.md SETTINGS.md packaging/70-headset-controller.rules
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/headset-controller)
 install(FILES packaging/headset-controller.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES packaging/headset-controller.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
 set(CPACK_PACKAGE_VENDOR "Headset Controller contributors")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Read-only Linux headset discovery and diagnostics")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Linux headset settings, discovery and diagnostics")
 set(CPACK_GENERATOR "TGZ")
 include(CPack)

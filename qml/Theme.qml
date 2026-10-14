@@ -5,6 +5,7 @@ QtObject {
     readonly property color ink: "#103740"
     readonly property color line: "#dedede"
     readonly property color muted: "#607277"
+    readonly property color error: "#a52a25"
     readonly property color surface: "white"
     readonly property color hover: "#f3f7f8"
     readonly property color selected: "#edf3f4"

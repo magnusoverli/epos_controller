@@ -10,7 +10,7 @@ QByteArray Diagnostics::toJson(const ScanResult &snapshot) {
                            {"application", QString::fromLatin1(BuildInfo::Name) + ' ' + BuildInfo::Version},
                            {"qtRuntimeVersion", qVersion()},
                            {"source", "sysfs descriptors; no device commands"},
-                           {"settingsTransport", "unverified"},
+                           {"settingsTransport", "hidraw; sidetone/ANC on explicit request"},
                            {"capturedAt", snapshot.capturedAt.toString(Qt::ISODateWithMs)},
                            {"scanStatus", statusName(snapshot.status)},
                            {"stale", snapshot.stale},

@@ -18,6 +18,8 @@ struct ScanIssue {
 
 struct HidInterface {
     QString node;
+    QString sysfsPath;
+    QString sysfsIdentity;
     QString interfaceNumber;
     HidDescriptor::Result layout =
         std::unexpected(HidDescriptor::ParseError{HidDescriptor::ErrorCode::Empty, 0});

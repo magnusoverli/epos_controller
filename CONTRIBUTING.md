@@ -26,8 +26,19 @@ vendor archives are not required to build or test a checkout.
   Domain device/interface/error types are adapted to variants only for JSON and
   the selection list. Pages consume the typed `SelectedDevice` view.
 - Unsupported settings in `SettingsCatalog` are inventory, not capabilities,
-  defaults, or device readback. A verified protocol/capability service must own
-  future settings; firmware updates need a separate state machine.
+  defaults, or device readback. `app/settings/` owns settings values, constraints
+  and transactions; `SettingsController` adapts them for QML. Keep Windows evidence
+  in independent protocol fixtures, not in runtime architecture or dependencies.
+  Firmware updates need a separate state machine. See [SETTINGS.md](SETTINGS.md).
+- Settings reads run automatically while the GUI device-settings view is active,
+  on page activation and changed selection; writes require explicit interaction.
+  Keep screenshot/smoke modes descriptor-only. Keep one operation per worker,
+  generation invalidation, bounded/cancellable input and fresh readback around
+  writes. Never retry an ambiguous setter automatically. Kernel output ioctl
+  cancellation is limited by its USB timeout; do not move it onto the GUI thread.
+- CTest must not send commands to real hardware. The manual
+  `headset-settings-probe` target requires explicit operator coordination and is
+  excluded from normal builds, installation and CTest.
 
 ## Checks
 
@@ -43,6 +54,12 @@ assertions. UI tests must inject data instead of requiring physical hardware.
 Use signal/property readiness rather than arbitrary sleeps. Keep a separate live
 startup smoke test; physical unplug/replug and native desktop checks complement,
 rather than replace, deterministic tests.
+
+Normal GUI launches may automatically request system authorization to install
+persistent headset access. Use `--smoke-test` or screenshot mode for unattended
+checks; these never start access setup. `device-access-test` substitutes an
+unprivileged child process and installs fixtures only in temporary directories.
+Do not exercise the privileged helper's install mode in automated host tests.
 
 Keep C++ formatting aligned with `.clang-format` using clang-format 21 and text
 files with `.editorconfig`. Run `python3 scripts/check-format.py` (`CLANG_FORMAT`

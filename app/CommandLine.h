@@ -3,13 +3,26 @@
 #include <QStringList>
 #include <expected>
 
-enum class LaunchMode { Gui, Diagnostics, ListDevices, Help, Version };
+enum class LaunchMode {
+    Gui,
+    Diagnostics,
+    ListDevices,
+    ReadSettings,
+    ReadFirmware,
+    InspectFirmware,
+    Help,
+    Version
+};
 struct LaunchOptions {
     LaunchMode mode = LaunchMode::Gui;
     Pages::Page page = Pages::Home;
     bool openDiagnostics = false;
     bool smokeTest = false;
     QString screenshot;
+    QString deviceKey;
+    QString firmwarePackage;
+    QString firmwareOffer;
+    QString installedVersion;
     QStringList qtArguments;
 };
 

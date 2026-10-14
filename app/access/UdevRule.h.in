@@ -1,0 +1,7 @@
+#pragma once
+#include <string_view>
+
+namespace DeviceAccess {
+inline constexpr std::string_view Rule = R"udevrule(@HEADSET_UDEV_RULE@)udevrule";
+inline constexpr auto InstalledHelper = "@HEADSET_ACCESS_HELPER_RELATIVE@";
+} // namespace DeviceAccess

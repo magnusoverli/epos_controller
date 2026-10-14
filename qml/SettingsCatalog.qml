@@ -5,7 +5,7 @@ QtObject {
     // Stable keys identify future capabilities; labels are presentation only.
     // This is an inventory, not defaults or device readback.
     readonly property var device: [
-        { section: qsTr("CALL AND AUDIO") },
+        { sectionKey: "audio", section: qsTr("CALL AND AUDIO") },
         { key: "ancMode", label: qsTr("ANC and Talkthrough") },
         { key: "adaptiveAnc", label: qsTr("Adaptive") },
         { key: "ancLevel", label: qsTr("ANC level") },
@@ -17,7 +17,7 @@ QtObject {
         { key: "muteOnRemoval", label: qsTr("Mute Call — By removing headset") },
         { key: "boomSide", label: qsTr("Boom Arm Side") },
         { key: "autoPause", label: qsTr("Auto Pause") },
-        { section: qsTr("SOUNDS & NOTIFICATIONS") },
+        { sectionKey: "sounds", section: qsTr("SOUNDS & NOTIFICATIONS") },
         { key: "prompts", label: qsTr("Tone & Voice Prompts") },
         { key: "promptLanguage", label: qsTr("Voice Prompt Language") },
         { key: "noPromptsDuringCalls", label: qsTr("No Prompts During Calls") },
@@ -26,15 +26,15 @@ QtObject {
         { key: "muteNotification", label: qsTr("Mute Notification") },
         { key: "muteInterval", label: qsTr("Mute Interval") },
         { key: "talkWhileMuted", label: qsTr("Talk While Muted") },
-        { section: qsTr("DEVICE") },
+        { sectionKey: "device", section: qsTr("DEVICE") },
         { key: "buttonStatus", label: qsTr("Button Status") },
         { key: "smartPause", label: qsTr("Smart Pause — By taking headset off") },
         { key: "factoryReset", label: qsTr("Factory Reset") }
     ]
     readonly property var application: [
-        { section: qsTr("SOFTPHONE") },
+        { sectionKey: "softphone", section: qsTr("SOFTPHONE") },
         { key: "defaultSoftphone", label: qsTr("Default Softphone") },
-        { section: qsTr("LANGUAGE") },
+        { sectionKey: "language", section: qsTr("LANGUAGE") },
         { key: "language", label: qsTr("Language") }
     ]
 }
