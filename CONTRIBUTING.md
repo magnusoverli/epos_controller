@@ -42,6 +42,59 @@ vendor archives are not required to build or test a checkout.
 
 ## Checks
 
+### Build environments
+
+The release baseline is Qt 6.12.0, CMake 4.4.4 and GCC 15.2 on Ubuntu 26.04
+x86-64. CI additionally builds with GCC 14, checks the parser with Clang/libc++,
+and fuzzes with Clang/libstdc++. Application builds require C++23 `std::expected`
+and `std::move_only_function`; parser-only builds require only `std::expected`.
+
+For an already provisioned local SDK, `scripts/with-sdk.sh` selects
+`$EPOS_SDK_ROOT` (default `$HOME/.local/share/epos-controller`) containing
+`Qt/6.12.0/gcc_64/` and `cmake-4.4.4-linux-x86_64/`. It clears inherited Qt and
+loader overrides but does not install dependencies:
+
+```sh
+bash scripts/with-sdk.sh cmake --preset release
+bash scripts/with-sdk.sh cmake --build --preset release --parallel
+bash scripts/with-sdk.sh ctest --preset release
+```
+
+Use `cmake --fresh --preset release` when changing SDKs. Additional dependency
+prefixes can be supplied through `EPOS_EXTRA_PREFIX_PATH`.
+
+### Validation commands
+
+```sh
+ctest --preset release --output-on-failure
+cmake --build build/release --target headset-controller_qmllint
+cmake --preset sanitize
+cmake --build --preset sanitize --parallel
+ctest --preset sanitize --output-on-failure
+python3 scripts/check-install.py build/release
+```
+
+The install check stages and relocates the app, checks Qt linkage with inherited
+loader overrides removed, and starts every page without device transactions.
+See [binary packaging](packaging/BINARY_RELEASE.md) for distribution-archive and
+clean-container checks. For distro packages using a compatible system Qt,
+configure `-DHEADSET_DEPLOY_QT=OFF` and declare the runtime dependencies explicitly.
+
+The Qt-independent parser has its own preset:
+
+```sh
+cmake --preset parser
+cmake --build --preset parser
+ctest --preset parser
+```
+
+For libFuzzer, configure with Clang and `-DHEADSET_PARSER_ONLY=ON
+-DHEADSET_FUZZING=ON`. Match the C++ runtime used to build the installed libFuzzer
+(Ubuntu's package uses libstdc++). Seed with
+`python3 scripts/seed-fuzz.py build/corpus`, then run
+`build/fuzz/hid-descriptor-fuzz build/corpus -max_total_time=30 -max_len=8193`.
+`-DHEADSET_BENCHMARKS=ON` adds the `discovery-benchmark` target.
+
 Run the Release and sanitizer presets, `headset-controller_qmllint`, and
 `scripts/check-install.py` for runtime/deployment changes. QML warnings fail lint
 via `.qmllint.ini`. A parser-only build and optional Clang libFuzzer target provide

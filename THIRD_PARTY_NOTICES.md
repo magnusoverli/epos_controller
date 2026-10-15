@@ -25,10 +25,24 @@ and provide the corresponding Qt source under its applicable terms.
 - Exact-release source archives: https://download.qt.io/official_releases/qt/
 - Module and embedded dependency notices: https://doc.qt.io/qt-6/licenses.html
 
-The default CMake install deploys matching shared libraries using Qt's deployment
-API. It is a relocatable development staging layout; a public release must also
-include its SDK's licensing material and corresponding-source distribution.
-Do not infer that a runtime smoke test establishes these distribution obligations.
+The published Ubuntu 26.04 x86-64 archive includes Qt 6.12.0 shared libraries,
+plugins and QML modules. License texts, embedded third-party notices, SDK
+configuration and binary SBOMs are in `share/headset-controller/licenses/`.
+The `headset-controller-1.0.0-qt-sources.tar.gz` asset on the same release page
+provides the corresponding unmodified Qt module sources and build instructions.
+Qt libraries remain replaceable; reverse engineering for debugging modifications
+to them is not prohibited by this application.
+
+The raw CMake install is a development staging layout. For redistributable
+archives, use the [binary packaging workflow](https://github.com/magnusoverli/epos_controller/blob/main/packaging/BINARY_RELEASE.md).
+
+## ICU
+
+The binary archive includes ICU 73.2 shared libraries from the Qt SDK.
+Copyright © 1991–2023 Unicode, Inc. and other contributors. The Unicode license
+and embedded third-party notices are included in
+`share/headset-controller/licenses/ICU-73.2-LICENSE`.
+Source: https://github.com/unicode-org/icu/releases/tag/release-73-2.
 
 ## libarchive
 
@@ -36,7 +50,8 @@ Offline firmware ZIP inspection dynamically links libarchive. It is distributed
 under BSD-style terms; its source, per-file notices and dependency details are at
 https://github.com/libarchive/libarchive (see `COPYING`). Binary distributors must
 retain the applicable notices for the version and compression libraries shipped.
-The inspected vendor firmware stays outside the application distribution.
+The published binary archive uses the distribution's libarchive package rather
+than bundling it. Inspected vendor firmware stays outside the application distribution.
 
 ## Linux runtime
 

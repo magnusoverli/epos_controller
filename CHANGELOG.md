@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Unreleased]
+- Add a prebuilt Ubuntu 26.04 x86-64 release bundle and rewrite the README around installation and everyday use.
 
 ## [1.0.0] - 2026-10-15
 
