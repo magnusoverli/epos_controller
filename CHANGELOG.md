@@ -1,6 +1,17 @@
 # Changelog
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-10-15
+
+First source release. See [release notes](releases/1.0.0.md) for features,
+build instructions and hardware-validation limitations.
+
+- Set application version to 1.0.0 and show it in the window title and header.
+- Add versioned release notes and correct the CI OpenGL and fuzzer runtime dependencies.
+
+### Development history
+
 - Settings sections now start collapsed and support click/keyboard expansion; removed the Test notification button.
 - Keep settings responsive during background readback; sidetone saves on mouse/touch release without Apply or keyboard adjustment, with clearer errors and navigation.
 - Allow user-initiated installation of future official firmware releases using the captured update flow and live catalog hashes, without a version allowlist.

@@ -4,7 +4,11 @@ An independent C++23 / Qt Quick application for the EPOS IMPACT 860T ANC.
 
 ## Status
 
-The application is a **Linux settings preview**:
+**Version 1.0.0** is the first source release for Linux and the EPOS IMPACT 860T ANC
+(`1395:018e`). See the [release notes](releases/1.0.0.md) and
+[GitHub release](https://github.com/magnusoverli/epos_controller/releases/tag/v1.0.0).
+
+Included features:
 
 - Asynchronous USB discovery through Linux sysfs, with debounced udev hotplug events and fallback polling.
 - HID interface inspection and JSON diagnostics, available in the GUI or without a display server.
@@ -18,7 +22,7 @@ The application is a **Linux settings preview**:
 - The selected headset now returns automatically after reset/replug on the same USB port, with fresh settings and firmware reads. Temporary access delays are rechecked before requesting authorization.
 - Home, Updates, Settings and Help screens.
 
-Sidetone 32/33%, ANC Off/On, Adaptive Off/On and Middle/High ANC level have passed live Linux change-and-restore tests on `1395:018e`. The preview also offers a 0–100% sidetone slider, TalkThrough and Low ANC using traced Windows-adapter mappings; these expanded values still need hardware validation. Other device preferences and broader firmware transitions remain pending. See [settings support, architecture and parity roadmap](SETTINGS.md).
+Sidetone 32/33%, ANC Off/On, Adaptive Off/On and Middle/High ANC level have passed live Linux change-and-restore tests on `1395:018e`. The app also offers a 0–100% sidetone slider, TalkThrough and Low ANC using traced Windows-adapter mappings; these expanded values still need hardware validation. Other device preferences and broader firmware transitions remain pending. See [settings support, architecture and parity roadmap](SETTINGS.md).
 
 Device settings load automatically when you open the page or select a connected headset while it is open. Refresh/Retry remains available; changes require user interaction. Discovery, diagnostics and screenshot/smoke modes remain descriptor-only. Firmware is reported as unknown rather than inferred from the USB revision. The first discovered headset is initially selected; the selector allows choosing another. After removal/replacement, select the new connection explicitly; its settings load automatically on the open page. Selection never silently follows a different physical connection at the same USB port.
 

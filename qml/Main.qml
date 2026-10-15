@@ -37,13 +37,13 @@ ApplicationWindow {
     minimumWidth: 960
     minimumHeight: 650
     visible: true
-    title: Qt.application.name + qsTr(" — Linux preview")
+    title: Qt.application.name + " " + Qt.application.version
     color: Theme.surface
     font.family: "Sans Serif"
     font.pixelSize: Theme.bodySize
 
     Label { x: 44; y: 26; text: Qt.application.name.toUpperCase(); font.pixelSize: 25; color: Theme.ink; textFormat: Text.PlainText }
-    Label { anchors.right: parent.right; anchors.rightMargin: 44; y: 36; text: qsTr("LINUX  /  SETTINGS PREVIEW"); color: Theme.muted; font.pixelSize: Theme.smallSize }
+    Label { anchors.right: parent.right; anchors.rightMargin: 44; y: 36; text: qsTr("LINUX  /  %1").arg(Qt.application.version); color: Theme.muted; font.pixelSize: Theme.smallSize }
     RowLayout {
         anchors { left: parent.left; right: parent.right; leftMargin: 45; rightMargin: 70; top: parent.top; topMargin: 64 }
         Label {
